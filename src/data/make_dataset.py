@@ -3,6 +3,8 @@ import click
 import logging
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
+import torch
+import numpy as np
 
 
 @click.command()
@@ -15,6 +17,29 @@ def main(input_filepath, output_filepath):
     logger = logging.getLogger(__name__)
     logger.info('making final data set from raw data')
 
+    Xtrain = np.load(input_filepath + "/train_0.npz")["images"]
+    Ytrain = np.load(input_filepath + "/train_0.npz")["labels"]
+
+    for i in range(1,5):
+        Xnext = np.load(input_filepath + "/train_{}.npz".format(i))["images"]
+        Xtrain = np.concatenate((Xtrain,Xnext),axis=0)
+        Ynext = np.load(input_filepath + "/train_{}.npz".format(i))["labels"]
+        Ytrain = np.concatenate((Ytrain,Ynext),axis=0)
+
+    Xtest = np.load(input_filepath + "/test.npz")["images"]
+    Ytest = np.load(input_filepath + "/test.npz")["labels"]
+
+    #convert to tensors
+    Xtrain = torch.from_numpy(Xtrain).float()
+    Ytrain = torch.from_numpy(Ytrain).float()
+    Xtest = torch.from_numpy(Xtest).float()
+    Ytest = torch.from_numpy(Ytest).float()
+
+    train= torch.utils.data.TensorDataset(Xtrain, Ytrain)
+    test = torch.utils.data.TensorDataset(Xtest,Ytest)
+
+    torch.save(train, output_filepath)
+    torch.save(test, output_filepath)
 
 if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
